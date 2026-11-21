@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlacementMate - Placement Deadline Tracker</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#687386;--border:#e1e6ef;--accent:#3157c8;--accent-light:#e9eeff;--danger:#d9364f;--success:#198754;--panel:#f8f9fc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}
+.container{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
+h1{font-size:30px;margin:0 0 5px} .subtitle{color:var(--muted);font-size:14px}
+.pill{background:var(--accent-light);color:var(--accent);padding:7px 12px;border-radius:30px;font-size:12px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.stat,.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.stat-label{font-size:13px;color:var(--muted)}.stat-value{font-size:27px;font-weight:750;margin-top:5px}
+h2{font-size:19px;margin:0 0 15px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+input,select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font:inherit;min-width:0}
+button{border:0;border-radius:9px;padding:11px 15px;font-weight:650;cursor:pointer;font:inherit;font-size:14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #9eb2ff;outline-offset:2px}
+.primary{background:var(--accent);color:#fff;width:100%;margin-top:14px}.secondary{background:#f1f3f8;color:var(--text);border:1px solid var(--border)}.danger-btn{background:#fff2f3;color:var(--danger);border:1px solid #f4cbd1}
+.message{font-size:13px;color:var(--muted);margin-top:10px;min-height:18px}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.list{display:flex;flex-direction:column;gap:12px}
+.opportunity{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px}
+.opportunity.urgent{border-left:4px solid var(--danger)}
+.opportunity.completed{opacity:.72}
+.opportunity-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.company{font-size:18px;font-weight:750;overflow-wrap:anywhere}.role{font-size:13px;color:var(--muted);margin-top:3px}
+.deadline{font-size:12px;color:var(--muted);margin-top:10px}
+.countdown{font-size:13px;font-weight:750;text-align:right;white-space:nowrap;flex-shrink:0}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:13px}
+.actions button{padding:8px 11px;font-size:12px}
+.actions a{font-size:13px;color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:22px}
+.section{margin-top:18px}
+.note{font-size:12px;color:var(--muted);margin-top:18px}
+@media(max-width:620px){.container{padding:20px 13px 35px}h1{font-size:25px}.stats{gap:8px}.stat{padding:12px}.stat-value{font-size:23px}.grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr 1fr}.opportunity{padding:12px}.countdown{font-size:12px}}
+@media(max-width:390px){.countdown{white-space:normal;max-width:100px}}
+</style>
+</head>
+<body>
+<main class="container">
+<header>
+  <div><h1>PlacementMate</h1><div class="subtitle">Your placement journey, organized.</div></div>
+  <span class="pill">Student tracker</span>
+</header>
+
+<section class="stats" aria-label="Application summary">
+  <div class="stat"><div class="stat-label">Companies</div><div class="stat-value" id="total">0</div></div>
+  <div class="stat"><div class="stat-label">Pending</div><div class="stat-value" id="pending">0</div></div>
+  <div class="stat"><div class="stat-label">Completed</div><div class="stat-value" id="completed">0</div></div>
+</section>
+
+<section class="card">
+  <h2>Add a company</h2>
+  <div class="grid">
+    <div><label for="company">Company name *</label><input id="company" placeholder="e.g. Google" required></div>
+    <div><label for="role">Job role / opportunity *</label><input id="role" placeholder="e.g. Software Engineer Intern" required></div>
+    <div><label for="category">Category *</label><select id="category" required><option value="">Choose category</option><option>Internship</option><option>Full-time</option><option>Assessment</option><option>Hackathon</option><option>Other</option></select></div>
+    <div><label for="date">Closing date *</label><input id="date" type="date" required></div>
+    <div><label for="time">Closing time *</label><input id="time" type="time" value="17:00" required></div>
+    <div><label for="link">Application link (optional)</label><input id="link" type="url" placeholder="https://..."></div>
+  </div>
+  <button class="primary" id="addBtn" type="button">Add Company</button>
+  <div class="message" id="message" role="status">Fill in the details and press Add Company.</div>
+</section>
+
+<section class="section">
+  <h2>My opportunities</h2>
+  <input id="search" type="search" placeholder="Search company or role..." aria-label="Search opportunities">
+  <div class="toolbar">
+    <select id="filter" aria-label="Filter status"><option value="all">All opportunities</option><option value="pending">Pending</option><option value="soon">Due soon</option><option value="done">Completed</option></select>
+    <select id="categoryFilter" aria-label="Filter category"><option value="all">All categories</option><option>Internship</option><option>Full-time</option><option>Assessment</option><option>Hackathon</option><option>Other</option></select>
+  </div>
+  <div class="list" id="list"><div class="card empty">No applications yet. Add your first company.</div></div>
+</section>
+<p class="note">PlacementMate prototype. Entries are kept in memory while this page remains open; refreshing or closing the page clears them.</p>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let entries = [], nextId = 1, editingId = null;
+  const deadline = e => new Date(`${e.date}T${e.time}`);
+  const isUrgent = e => !e.done && deadline(e) > new Date() && deadline(e) - new Date() <= 48 * 60 * 60 * 1000;
+  const isOverdue = e => !e.done && deadline(e) < new Date();
+  const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const setMessage = text => $('message').textContent = text;
+  const countdown = e => {
+    if (e.done) return 'Completed';
+    const ms = deadline(e) - Date.now();
+    if (ms <= 0) return 'Deadline passed';
+    const days = Math.floor(ms / 86400000);
+    const hours = Math.floor((ms % 86400000) / 3600000);
+    const minutes = Math.floor((ms % 3600000) / 60000);
+    if (days) return `${days}d ${hours}h left`;
+    if (hours) return `${hours}h ${minutes}m left`;
+    return `${minutes}m left`;
+  };
+  const formatDeadline = e => deadline(e).toLocaleString([], {day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit'});
+
+  function render() {
+    $('total').textContent = entries.length;
+    $('pending').textContent = entries.filter(e => !e.done).length;
+    $('completed').textContent = entries.filter(e => e.done).length;
+    const query = $('search').value.toLowerCase();
+    let visible = entries.filter(e =>
+      (!query || `${e.company} ${e.role}`.toLowerCase().includes(query)) &&
+      ($('categoryFilter').value === 'all' || e.category === $('categoryFilter').value)
+    );
+    const filter = $('filter').value;
+    if (filter === 'pending') visible = visible.filter(e => !e.done);
+    if (filter === 'done') visible = visible.filter(e => e.done);
+    if (filter === 'soon') visible = visible.filter(isUrgent);
+    visible.sort((a,b) => deadline(a) - deadline(b));
+
+    if (!visible.length) {
+      $('list').innerHTML = '<div class="card empty">No matching applications found.</div>';
+      return;
+    }
+    $('list').innerHTML = visible.map(e => `
+      <article class="opportunity ${isUrgent(e) ? 'urgent' : ''} ${e.done ? 'completed' : ''}">
+        <div class="opportunity-top">
+          <div style="min-width:0">
+            <div class="company">${escapeHTML(e.company)}</div>
+            <div class="role">${escapeHTML(e.role)} · ${escapeHTML(e.category)}</div>
+            <div class="deadline">📅 ${escapeHTML(formatDeadline(e))}</div>
+          </div>
+          <div class="countdown" data-countdown="${e.id}" style="color:${e.done ? 'var(--success)' : isUrgent(e) || isOverdue(e) ? 'var(--danger)' : 'var(--text)'}">${countdown(e)}</div>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" data-action="toggle" data-id="${e.id}">${e.done ? 'Undo' : 'Mark done'}</button>
+          <button type="button" class="secondary" data-action="edit" data-id="${e.id}">Edit</button>
+          <button type="button" class="danger-btn" data-action="delete" data-id="${e.id}">Delete</button>
+          ${e.url ? `<a href="${escapeHTML(e.url)}" target="_blank" rel="noopener noreferrer">Application link ↗</a>` : ''}
+        </div>
+      </article>
+    `).join('');
+  }
+
+  function clearForm() {
+    ['company','role','date','link'].forEach(id => $(id).value = '');
+    $('category').value = '';
+    $('time').value = '17:00';
+    editingId = null;
+    $('addBtn').textContent = 'Add Company';
+  }
+
+  $('addBtn').addEventListener('click', () => {
+    const company = $('company').value.trim();
+    const role = $('role').value.trim();
+    const category = $('category').value;
+    const date = $('date').value;
+    const time = $('time').value;
+    const url = $('link').value.trim();
+    if (!company || !role || !category || !date || !time) {
+      setMessage('Please fill in all required fields.');
+      return;
+    }
+    const chosenDeadline = new Date(`${date}T${time}`);
+    if (Number.isNaN(chosenDeadline.getTime()) || (!editingId && chosenDeadline <= new Date())) {
+      setMessage('Please select a valid future deadline.');
+      return;
+    }
+    if (url) {
+      try {
+        if (!['http:', 'https:'].includes(new URL(url).protocol)) throw new Error();
+      } catch {
+        setMessage('Enter a valid application link starting with https://');
+        return;
+      }
+    }
+    const item = {company, role, category, date, time, url, done:false};
+    if (editingId) {
+      const existing = entries.find(e => e.id === editingId);
+      if (existing) Object.assign(existing, item);
+      setMessage('Application updated successfully.');
+    } else {
+      entries.push({...item, id:nextId++});
+      setMessage('Company added successfully!');
+    }
+    clearForm();
+    render();
+  });
+
+  $('list').addEventListener('click', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const id = Number(button.dataset.id);
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    if (button.dataset.action === 'toggle') {
+      entry.done = !entry.done;
+      setMessage(entry.done ? 'Marked as completed.' : 'Moved back to pending.');
+    } else if (button.dataset.action === 'delete') {
+      entries = entries.filter(e => e.id !== id);
+      setMessage('Application deleted.');
+    } else if (button.dataset.action === 'edit') {
+      editingId = id;
+      $('company').value = entry.company;
+      $('role').value = entry.role;
+      $('category').value = entry.category;
+      $('date').value = entry.date;
+      $('time').value = entry.time;
+      $('link').value = entry.url;
+      $('addBtn').textContent = 'Save Changes';
+      setMessage('Edit the details and press Save Changes.');
+      $('company').scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    render();
+  });
+
+  ['search','filter','categoryFilter'].forEach(id => $(id).addEventListener('input', render));
+  setInterval(() => {
+    document.querySelectorAll('[data-countdown]').forEach(node => {
+      const entry = entries.find(e => e.id === Number(node.dataset.countdown));
+      if (!entry) return;
+      node.textContent = countdown(entry);
+      node.style.color = entry.done ? 'var(--success)' : isUrgent(entry) || isOverdue(entry) ? 'var(--danger)' : 'var(--text)';
+    });
+  }, 60000);
+  render();
+})();
+</script>
+</body>
+</html>
